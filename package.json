@@ -1,0 +1,46 @@
+{
+  "_from": "git+https://github.com/liupishui/psd2pngmixcanvas.git",
+  "_id": "psd2pngmixcanvas@1.0.0",
+  "_inBundle": false,
+  "_location": "/psd2pngmixcanvas",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "git",
+    "raw": "git+https://github.com/liupishui/psd2pngmixcanvas.git",
+    "rawSpec": "git+https://github.com/liupishui/psd2pngmixcanvas.git",
+    "saveSpec": "git+https://github.com/liupishui/psd2pngmixcanvas.git",
+    "fetchSpec": "https://github.com/liupishui/psd2pngmixcanvas.git",
+    "gitCommittish": null
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "git+https://github.com/liupishui/psd2pngmixcanvas.git#41309b60fd2c4305f2cf403a6d8655ba83324533",
+  "_spec": "git+https://github.com/liupishui/psd2pngmixcanvas.git",
+  "_where": "D:\\soft\\Fet",
+  "author": "",
+  "bugs": {
+    "url": "https://github.com/liupishui/psd2pngmixcanvas/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+    "pixelsmith": "~2.2.0",
+    "psd": "^3.2.0"
+  },
+  "deprecated": false,
+  "description": "导出psd为png，同时将psd内图层名为 '*.psd'的图层，替换为对应psd栅格化后的图片",
+  "devDependencies": {},
+  "homepage": "https://github.com/liupishui/psd2pngmixcanvas#readme",
+  "license": "ISC",
+  "main": "index.js",
+  "name": "psd2pngmixcanvas",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liupishui/psd2pngmixcanvas.git"
+  },
+  "scripts": {
+    "start": "electron ."
+  },
+  "version": "1.0.0"
+}
