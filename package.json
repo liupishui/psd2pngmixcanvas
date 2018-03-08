@@ -25,7 +25,7 @@
   },
   "bundleDependencies": false,
   "dependencies": {
-    "pixelsmith": "~2.2.0",
+    "pixelsmith": "git+https://github.com/liupishui/pixelsmith.git",
     "psd": "^3.2.0"
   },
   "deprecated": false,
