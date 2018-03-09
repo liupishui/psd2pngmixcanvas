@@ -2,12 +2,13 @@
 * @Author: anchen
 * @Date:   2018-02-07 19:46:55
 * @Last Modified by:   anchen
-* @Last Modified time: 2018-03-07 21:28:41
+* @Last Modified time: 2018-03-09 19:40:29
 */
 var fs = require('fs');
 var path = require('path');
 var PSD = require('psd');
-
+const imagemin = require('imagemin');
+const imageminPngquant = require('imagemin-pngquant');
 //var images = require("images");
 
 // Load in our dependencies
@@ -87,85 +88,108 @@ function psd2pngmix(psdfile,cb){
             }
         })
         var destPath = path.join(path.dirname(psdfile), path.basename(psdfile, '.psd') + '.png');
-        psd.image.saveAsPng(destPath).then(function () {
+                var toPngData=[];
+        var dataNow = psd.image.toPng();//直接导出的图片
+        var readableSteamPng = dataNow.pack();
+        readableSteamPng.on('data',function(chunk){
+            toPngData.push(chunk);
+        })
 
-            //递归替换对应图层
-            var resolveReady = [];
-            function replaceLayersToPng(layers, callback) {
-                if (layers.length == 0) {
-                    callback();
-                } else {
-                    var layersCurr = layers.splice(-1)[0];
-                    var layersCurrPath = path.join(path.dirname(psdfile), layersCurr.name);
-//                    console.log(layersCurrPath);
-                    if (!resolveReady.some(function (val) { return val == layersCurrPath })) {
-                        if (fs.existsSync(layersCurrPath)) {
-                            var psdCurr = PSD.fromFile(layersCurrPath);
-                            if(psdCurr.parse()){
-                                //psdCurr.tree()._children[0].saveAsPng(path.join(path.dirname(layersCurrPath), path.basename(layersCurrPath, '.psd') + '3.png'));
-                                psdCurr.image.saveAsPng(path.join(path.dirname(layersCurrPath), path.basename(layersCurrPath, '.psd') + '.png')).then(function () {
+        readableSteamPng.on('end',function(){
+            let imgCurrbuff = Buffer.concat(toPngData);
+            //导出png图片;如果有符合条件的图层，则拼接后输出
+            imageminPngquant()(imgCurrbuff).then(function(imgCurrbuffCompressed){
+                fs.writeFileSync(destPath,imgCurrbuffCompressed);
+
+                //递归替换对应图层
+                var resolveReady = [];
+                function replaceLayersToPng(layers, callback) {
+                    if (layers.length == 0) {
+                        callback();
+                    } else {
+                        var layersCurr = layers.splice(-1)[0];
+                        var layersCurrPath = path.join(path.dirname(psdfile), layersCurr.name);
+    //                    console.log(layersCurrPath);
+                        if (!resolveReady.some(function (val) { return val == layersCurrPath })) {
+                            if (fs.existsSync(layersCurrPath)) {
+                                var psdCurr = PSD.fromFile(layersCurrPath);
+                                if(psdCurr.parse()){
+                                    //psdCurr.tree()._children[0].saveAsPng(path.join(path.dirname(layersCurrPath), path.basename(layersCurrPath, '.psd') + '3.png'));
+                                    psdCurr.image.saveAsPng(path.join(path.dirname(layersCurrPath), path.basename(layersCurrPath, '.psd') + '.png')).then(function () {
+                                        replaceLayersToPng(layers, callback);
+                                    });
+                                }else{
                                     replaceLayersToPng(layers, callback);
-                                });
-                            }else{
+                                }
+                            } else {
                                 replaceLayersToPng(layers, callback);
                             }
                         } else {
                             replaceLayersToPng(layers, callback);
                         }
-                    } else {
-                        replaceLayersToPng(layers, callback);
                     }
                 }
-            }
-            replaceLayersToPng(replaceLayers, function () {
-               // var imageCurr = images(destPath);
-                var imagesAll=[destPath];
-                var imagesAllInfo=[destPath];
-                for(let layer of replaceLayersRecord) {
-                    var layersCurrPath = path.join(path.dirname(psdfile), layer.name);
-                    var layersCurrPng = path.join(path.dirname(layersCurrPath), path.basename(layersCurrPath, '.psd') + '.png');
-                    if (fs.existsSync(layersCurrPng)) {
-                        //var imageWater = images(layersCurrPng);
-                        var x = layer.left < 0 ? 0 : layer.left;
-                        var y = layer.top < 0 ? 0 : layer.top;
-                       // imageWater.resize(layer.width, layer.height);
-                       // imageCurr.draw(imageWater, x, y);
-                        imagesAll.push(layersCurrPng);
-                        imagesAllInfo.push({path:layersCurrPng,x:x,y:y});
+                replaceLayersToPng(replaceLayers, function () {
+                   // var imageCurr = images(destPath);
+                    var imagesAll=[destPath];
+                    var imagesAllInfo=[destPath];
+                    for(let layer of replaceLayersRecord) {
+                        var layersCurrPath = path.join(path.dirname(psdfile), layer.name);
+                        var layersCurrPng = path.join(path.dirname(layersCurrPath), path.basename(layersCurrPath, '.psd') + '.png');
+                        if (fs.existsSync(layersCurrPng)) {
+                            //var imageWater = images(layersCurrPng);
+                            var x = layer.left < 0 ? 0 : layer.left;
+                            var y = layer.top < 0 ? 0 : layer.top;
+                           // imageWater.resize(layer.width, layer.height);
+                           // imageCurr.draw(imageWater, x, y);
+                            imagesAll.push(layersCurrPng);
+                            imagesAllInfo.push({path:layersCurrPng,x:x,y:y});
+                        }
+                    };
+                    // console.log(imagesAll);
+                    // console.log(imagesAllInfo);
+                    console.log(imagesAll);
+                    if(imagesAll.length>1){
+                        pixelsmith.createImages(imagesAll, function handleImages (err, imgs) {
+                          // If there was an error, throw it
+                          if (err) {
+                            throw err;
+                          }
+
+                          // Create a canvas that fits our images (200px wide, 300px tall)
+                          var canvas = pixelsmith.createCanvas(imgs[0].width, imgs[0].height);
+
+                          // Add the images to our canvas (at x=0, y=0 and x=50, y=100 respectively)
+                          canvas.addImage(imgs[0], 0, 0);
+                          for(var i = 1; i<imagesAllInfo.length; i++){
+                            canvas.addImage(imgs[i],imagesAllInfo[i].x,imagesAllInfo[i].y);
+                          }
+                          // Export canvas to image
+                          let finalImgBuffArr = [];
+                          let resultStream = canvas['export']({format: 'png'});
+                          resultStream.on('data',function(chunk){
+                            finalImgBuffArr.push(chunk);
+                          });
+                          resultStream.on('end',function(){
+                              imageminPngquant()(Buffer.concat(finalImgBuffArr)).then(function(rst){
+                                fs.writeFileSync(imagesAll[0],rst);
+                                cb(imagesAll[0]);
+                              },function(err){
+                                cb(imagesAll[0]);
+                              });
+                          })
+                          // var writeStream = fs.createWriteStream(imagesAll[0]);
+                          // resultStream.pipe(writeStream);
+
+                        });
+                    }else{
+                            cb(imagesAll[0]);
                     }
-                };
-                // console.log(imagesAll);
-                // console.log(imagesAllInfo);
-                if(imagesAll.length>1){
-                    pixelsmith.createImages(imagesAll, function handleImages (err, imgs) {
-                      // If there was an error, throw it
-                      if (err) {
-                        throw err;
-                      }
+                    //imageCurr.save(destPath);
+                });
 
-                      // We recieve images in the same order they were given
-                      imgs[0].width; // 50 (pixels)
-                      imgs[0].height; // 100 (pixels)
-
-                      // Create a canvas that fits our images (200px wide, 300px tall)
-                      var canvas = pixelsmith.createCanvas(imgs[0].width, imgs[0].height);
-
-                      // Add the images to our canvas (at x=0, y=0 and x=50, y=100 respectively)
-                      canvas.addImage(imgs[0], 0, 0);
-                      for(var i = 1; i<imagesAllInfo.length; i++){
-                        canvas.addImage(imgs[i],imagesAllInfo[i].x,imagesAllInfo[i].y);
-                      }
-                      // Export canvas to image
-                      var resultStream = canvas['export']({format: 'png'});
-                      var writeStream = fs.createWriteStream(imagesAll[0]);
-                      resultStream.pipe(writeStream);
-                      //fs.writeFileSync(imagesAll[0],resultStream.data); // Readable stream outputting PNG image of the canvas
-                    });
-                }
-                //imageCurr.save(destPath);
-                cb(imagesAll[0]);
-            });
-        });
+            })
+        })
 
         //scanTree(psdTree);
 
